@@ -1,8 +1,9 @@
 name: Release
+
 on:
   workflow_dispatch:
   schedule:
-    - cron: "45 9 * * *"
+    - cron: "30 9 * * *"
 jobs:
   build:
     name: Build
@@ -16,6 +17,11 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: 'stable'
+      - name: Set variables
+        run: |
+          echo "TAG_NAME=$(date +%Y%m%d%H%M%S)" >> $GITHUB_ENV
+          echo "RELEASE_NAME=$(date +%Y%m%d%H%M%S)" >> $GITHUB_ENV
+        shell: bash
       - name: Build geosite
         id: build
         env:
@@ -47,9 +53,26 @@ jobs:
         if: steps.build.outputs.skip != 'true'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.build.outputs.tag }}
+          tag_name: ${{ env.TAG_NAME }}
+          name: ${{ env.RELEASE_NAME }}
+          draft: false
+          prerelease: false
           files: |
             geosite.db
             geosite.db.sha256sum
             geosite-cn.db
             geosite-cn.db.sha256sum
+      - name: Delete releases and workflows runs
+        uses: ophub/delete-releases-workflows@main
+        with:
+          delete_releases: true
+          prerelease_option: "all"
+          releases_keep_latest: 7
+          # releases_keep_keyword: ""
+          delete_tags: true
+          delete_workflows: true
+          workflows_keep_day: 7
+          # workflows_keep_keyword: ""
+          out_log: false
+          # repo: "shNzshNz/geoipdb"
+          gh_token: ${{ secrets.GITHUB_TOKEN }}
